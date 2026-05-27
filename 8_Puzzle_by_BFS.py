@@ -47,13 +47,13 @@ class EightPuzzleBFS:
             for j in range(3):
                 val = state[i][j]
                 if val == 0:
-                    self.buttons[i][j].config(text="", bg="#777") # Ô trống màu xám
+                    self.buttons[i][j].config(text="", bg="#777") 
                 else:
                     self.buttons[i][j].config(text=str(val), bg="#fff")
 
     def get_neighbors(self, state):
         neighbors = []
-        # Tìm vị trí ô trống (0)
+     
         r, c = -1, -1
         for i in range(3):
             for j in range(3):
