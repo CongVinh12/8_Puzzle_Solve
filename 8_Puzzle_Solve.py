@@ -9,8 +9,8 @@ import random
 class EightPuzzleApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("8-Puzzle")
-        self.root.geometry("500x700") 
+        self.root.title("8-Puzzle Solver: BFS, DFS, IDS, UCS & A*")
+        self.root.geometry("520x740")
         self.root.resizable(False, False)
         
         self.goal_state = (1, 2, 3, 8, 0, 4, 7, 6, 5)
@@ -23,7 +23,7 @@ class EightPuzzleApp:
         self.shuffle_puzzle()
 
     def setup_ui(self):
-        title_label = tk.Label(self.root, text="8-PUZZLE SOLVER", font=("Arial", 16, "bold"))
+        title_label = tk.Label(self.root, text="8-PUZZLE", font=("Arial", 16, "bold"))
         title_label.pack(pady=10)
 
         # Khung hiển thị ô 3x3
@@ -60,26 +60,25 @@ class EightPuzzleApp:
         control_frame = tk.Frame(self.root)
         control_frame.pack(pady=10)
         
-        # Dòng thuật toán mù & cơ bản
         self.bfs_btn = tk.Button(control_frame, text="BFS", font=("Arial", 10, "bold"), 
-                                 bg="#99ccff", width=8, command=lambda: self.start_solving_thread("BFS"))
-        self.bfs_btn.grid(row=0, column=0, padx=3, pady=3)
+                                 bg="#99ccff", width=7, command=lambda: self.start_solving_thread("BFS"))
+        self.bfs_btn.grid(row=0, column=0, padx=3)
         
         self.dfs_btn = tk.Button(control_frame, text="DFS", font=("Arial", 10, "bold"), 
-                                 bg="#ff9999", width=8, command=lambda: self.start_solving_thread("DFS"))
-        self.dfs_btn.grid(row=0, column=1, padx=3, pady=3)
+                                 bg="#ff9999", width=7, command=lambda: self.start_solving_thread("DFS"))
+        self.dfs_btn.grid(row=0, column=1, padx=3)
         
         self.IDS_btn = tk.Button(control_frame, text="IDS", font=("Arial", 10, "bold"), 
-                                   bg="#ffcc99", width=8, command=lambda: self.start_solving_thread("IDS"))
-        self.IDS_btn.grid(row=0, column=2, padx=3, pady=3)
+                                   bg="#ffcc99", width=7, command=lambda: self.start_solving_thread("IDS"))
+        self.IDS_btn.grid(row=0, column=2, padx=3)
 
         self.ucs_btn = tk.Button(control_frame, text="UCS", font=("Arial", 10, "bold"), 
-                                   bg="#c2f0c2", width=8, command=lambda: self.start_solving_thread("UCS"))
-        self.ucs_btn.grid(row=0, column=3, padx=3, pady=3)
+                                   bg="#c2f0c2", width=7, command=lambda: self.start_solving_thread("UCS"))
+        self.ucs_btn.grid(row=0, column=3, padx=3)
 
         self.astar_btn = tk.Button(control_frame, text="A*", font=("Arial", 10, "bold"), 
-                                   bg="#e6b3ff", width=8, command=lambda: self.start_solving_thread("A*"))
-        self.astar_btn.grid(row=0, column=4, padx=3, pady=3)
+                                   bg="#e6b3ff", width=7, command=lambda: self.start_solving_thread("A*"))
+        self.astar_btn.grid(row=0, column=4, padx=3)
         
         self.idastar_btn = tk.Button(control_frame, text="IDA*", font=("Arial", 10, "bold"), 
                                    bg="#d9b3ff", width=12, command=lambda: self.start_solving_thread("IDA*"))
@@ -93,8 +92,12 @@ class EightPuzzleApp:
                                    bg="#ffe680", width=15, command=lambda: self.start_solving_thread("Leo đồi dốc nhất"))
         self.sahc_btn.grid(row=1, column=3, columnspan=2, padx=3, pady=3)
         
+        self.lbs_btn = tk.Button(control_frame, text="Local Beam Search", font=("Arial", 10, "bold"), 
+                                   bg="#ff99dd", width=25, command=lambda: self.start_solving_thread("Local Beam Search"))
+        self.lbs_btn.grid(row=2, column=0, columnspan=5, padx=3, pady=3)
+        
         # Hiển thị trạng thái xử lý
-        self.status_label = tk.Label(self.root, text="Hệ thống đã tự động trộn ma trận mẫu!", font=("Arial", 11, "italic"), fg="blue", wraplength=400)
+        self.status_label = tk.Label(self.root, text="Hệ thống đã tự động trộn ma trận mẫu!", font=("Arial", 12, "italic"), fg="blue")
         self.status_label.pack(pady=10)
 
     def update_grid(self):
@@ -147,6 +150,7 @@ class EightPuzzleApp:
         self.idastar_btn.config(state=state_mode)
         self.shc_btn.config(state=state_mode)
         self.sahc_btn.config(state=state_mode)
+        self.lbs_btn.config(state=state_mode)
         self.btn_set.config(state=state_mode)
         self.btn_shuffle.config(state=state_mode)
 
@@ -241,33 +245,44 @@ class EightPuzzleApp:
                     heapq.heappush(heap, (new_cost, neighbor, path + [current]))
         return None
 
-    # Hàm Tính toán tổng khoảng cách Manhattan
+    #  Thuật toán A*
     def get_manhattan_distance(self, state):
+        """Tính toán tổng khoảng cách Manhattan từ trạng thái hiện tại đến trạng thái mục tiêu"""
         distance = 0
         for i in range(9):
             val = state[i]
             if val != 0: 
                 goal_idx = self.goal_state.index(val)
+                
+                # Chuyển đổi chỉ số sang tọa độ (X,Y)
                 curr_r, curr_c = i // 3, i % 3
                 goal_r, goal_c = goal_idx // 3, goal_idx % 3
+                
                 distance += abs(curr_r - goal_r) + abs(curr_c - goal_c)
         return distance
 
-    # Thuật toán A*
     def run_astar(self):
+       
+        # f_score = g_score + h_score (Hàm Heuristic Manhattan)
         heap = []
         h_start = self.get_manhattan_distance(self.start_state)
         heapq.heappush(heap, (h_start, 0, self.start_state, []))
+        
         visited_costs = {self.start_state: 0}
         
         while heap:
             f, g, current, path = heapq.heappop(heap)
+            
             if current == self.goal_state:
                 return path + [current]
+                
             if g > visited_costs.get(current, float('inf')):
                 continue
+                
             for neighbor in self.get_moves(current):
-                new_g = g + 1
+                # Chi phí thực tế tăng lên 1 qua từng bước di chuyển
+                new_g = g + 1  
+                
                 if neighbor not in visited_costs or new_g < visited_costs[neighbor]:
                     visited_costs[neighbor] = new_g
                     h_score = self.get_manhattan_distance(neighbor)
@@ -275,8 +290,7 @@ class EightPuzzleApp:
                     heapq.heappush(heap, (f_score, new_g, neighbor, path + [current]))
         return None
 
-    # Thuật toán IDA* 
-    def run_idastar(self):
+    # Thuật toán IDA* def run_idastar(self):
         def idastar_search(path, g, threshold):
             current = path[-1]
             f = g + self.get_manhattan_distance(current)
@@ -314,7 +328,8 @@ class EightPuzzleApp:
     def run_simple_hill_climbing(self):
         current = self.start_state
         path = [current]
-        max_steps = 1000  # Giới hạn số bước lặp để tránh loop vô hạn tại cực trị cục bộ
+        # Giới hạn số bước lặp để tránh loop vô hạn tại cực trị cục bộ
+        max_steps = 1000  
         
         for _ in range(max_steps):
             if current == self.goal_state:
@@ -370,6 +385,39 @@ class EightPuzzleApp:
                 
         return path if current == self.goal_state else None
 
+    # Thuật toán Local Beam Search
+    def run_local_beam_search(self, k=3):
+        init_h = self.get_manhattan_distance(self.start_state)
+        # Mỗi phần tử trong beam lưu cấu trúc: (h_score, trạng thái_hiện_tại, đường_đi_đến_đó)
+        beam = [(init_h, self.start_state, [self.start_state])]
+        max_steps = 1000
+        visited = {self.start_state}
+        
+        for _ in range(max_steps):
+            for _, state, path in beam:
+                if state == self.goal_state:
+                    return path
+            
+            all_candidates = []
+            
+            # Mở rộng toàn bộ các node con kế tiếp từ tất cả các trạng thái trong chùm
+            for _, current_state, current_path in beam:
+                for neighbor in self.get_moves(current_state):
+                    if neighbor not in visited:
+                        visited.add(neighbor)
+                        h_score = self.get_manhattan_distance(neighbor)
+                        all_candidates.append((h_score, neighbor, current_path + [neighbor]))
+            
+            if not all_candidates:
+                break
+                
+            # Sắp xếp tất cả các ứng viên theo giá trị Heuristic tăng dần (ưu tiên h nhỏ nhất)
+            all_candidates.sort(key=lambda x: x[0])
+            
+            # Giữ lại k ứng viên tốt nhất để làm chùm tiếp theo
+            beam = all_candidates[:k]
+            
+        return None
 
     def start_solving_thread(self, algo):
         if self.is_solving: return
@@ -399,6 +447,8 @@ class EightPuzzleApp:
             path = self.run_simple_hill_climbing()
         elif algo == "Leo đồi dốc nhất":
             path = self.run_steepest_ascent_hill_climbing()
+        elif algo == "Local Beam Search":
+            path = self.run_local_beam_search(k=3)
             
         end_time = time.time()
         execution_time = end_time - start_time
@@ -415,7 +465,7 @@ class EightPuzzleApp:
                 fg="green"
             )
         else:
-            self.status_label.config(text=f"{algo} thất bại!\n(Thuật toán không tìm thấy lời giải hoặc bị kẹt ở trạng thái cực trị cục bộ).", fg="red")
+            self.status_label.config(text=f"{algo} thất bại (vượt quá giới hạn tìm kiếm hoặc lỗi cấu hình).", fg="red")
         
         self.is_solving = False
         self.set_buttons_state(tk.NORMAL)
